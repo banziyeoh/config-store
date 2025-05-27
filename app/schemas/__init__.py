@@ -1,0 +1,3 @@
+"""
+Data schemas module initialization.
+"""

@@ -1,0 +1,13 @@
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.pkl.gz
+*.db
+*.sqlite3
+*.log
+*.csv
+.env
