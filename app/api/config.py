@@ -56,7 +56,9 @@ def root():
 async def create_config(
     project: str = Path(..., description="Project identifier"),
     config_name: str = Path(..., description="Name of the configuration"),
-    file_format: str = Query(..., description="File format (json, toml, or xml)"),
+    file_format: str = Query(
+        ..., description="File format (json, toml, xml or jinja2)"
+    ),
     config: ConfigCreate = None,
     github: GitHubService = Depends(get_github_service),
     settings: Settings = Depends(get_settings),
