@@ -4,6 +4,7 @@ from typing import Any, Dict
 
 import toml
 from fastapi import HTTPException
+from jinja2 import Template
 
 from app.core.config import get_settings
 
@@ -20,8 +21,23 @@ def parse_config_content(content: str, file_format: str) -> Dict[str, Any]:
         elif file_format == "xml":
             root = ET.fromstring(content)
             return {elem.tag: elem.text for elem in root}
+        elif file_format == "jinja2":
+            # For Jinja2 templates, validate and extract variables
+            from jinja2 import Environment, meta
+
+            env = Environment()
+            try:
+                ast = env.parse(content)
+
+                variables = meta.find_undeclared_variables(ast)
+
+                return {"template": content, "variables": list(variables)}
+            except Exception as e:
+                raise ValueError(f"Invalid Jinja2 template: {str(e)}")
         else:
             raise ValueError(f"Unsupported format: {file_format}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid {file_format} format: {str(e)}"
@@ -44,6 +60,16 @@ def format_config_content(data: Dict[str, Any], file_format: str) -> str:
                 elem = ET.SubElement(root, str(key))
                 elem.text = str(value)
             return ET.tostring(root, encoding="unicode")
+        elif file_format == "jinja2":
+            # For Jinja2 templates, expect the template string in the 'template' field
+            if "template" not in data:
+                raise ValueError("Jinja2 template must contain a 'template' field")
+            try:
+                # Validate the template by trying to parse it
+                Template(data["template"])
+                return data["template"]
+            except Exception as e:
+                raise ValueError(f"Invalid Jinja2: {str(e)}")
     except Exception as e:
         raise ValueError(f"Error formatting {file_format}: {str(e)}")
 

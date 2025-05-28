@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from github import GithubException
+from jinja2 import Template
 
 from app.main import app
 from app.services.github import GitHubService
@@ -257,3 +258,71 @@ def test_format_error():
     )
     assert response.status_code == 400
     assert "unsupported format" in response.json()["detail"].lower()
+
+
+def test_invalid_jinja2_template(github_repo):
+    """Test creating an invalid Jinja2 template."""
+    template_content = """Hello {{ name!"""  # Invalid syntax: unclosed variable
+    request = {
+        "content": {"template": template_content},
+        "message": "Create invalid Jinja2 template",
+    }
+    response = client.post(
+        "/configs/test_project/invalid_template",
+        params={"file_format": "jinja2"},
+        json=request,
+    )
+    assert response.status_code == 400
+    error_detail = response.json()["detail"].lower()
+    assert "invalid jinja2 template" in error_detail
+
+
+def test_create_jinja2_template(github_repo):
+    """Test creating a Jinja2 template configuration."""
+    template_content = """Hello {{ name }}!
+Your age is {{ age }}.
+{% if is_admin %}
+You have admin access.
+{% endif %}"""
+    request = {
+        "content": {"template": template_content},
+        "message": "Create Jinja2 template",
+    }
+    response = client.post(
+        "/configs/test_project/template_config",
+        params={"file_format": "jinja2"},
+        json=request,
+    )
+    assert response.status_code == 200
+    assert "created successfully" in response.json()["message"]
+
+    # Verify the template was saved
+    response = client.get(
+        "/configs/test_project/template_config", params={"file_format": "jinja2"}
+    )
+    assert response.status_code == 200
+    content = response.json()
+    assert "template" in content
+    assert template_content == content["template"]
+    assert "variables" in content
+    variables = set(content["variables"])
+    assert variables == {"name", "age", "is_admin"}
+
+
+def test_invalid_jinja2_template(github_repo):
+    """Test creating an invalid Jinja2 template."""
+    template_content = """Hello {{ name!
+Invalid template
+{% endif %}"""  # Invalid syntax: unclosed variable and unexpected endif
+    request = {
+        "content": {"template": template_content},
+        "message": "Create invalid Jinja2 template",
+    }
+    response = client.post(
+        "/configs/test_project/invalid_template",
+        params={"file_format": "jinja2"},
+        json=request,
+    )
+    assert response.status_code == 400
+    error_detail = response.json()["detail"].lower()
+    assert any(msg in error_detail for msg in ["invalid jinja2", "invalid template"])

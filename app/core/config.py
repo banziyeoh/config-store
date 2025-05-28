@@ -9,7 +9,8 @@ class Settings(BaseSettings):
 
     github_repo: str
     github_token: str
-    supported_formats: list[str] = ["json", "toml", "xml"]
+    github_branch_name: str = "main"
+    supported_formats: list[str] = ["json", "toml", "xml", "jinja2"]
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 
