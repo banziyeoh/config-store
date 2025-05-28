@@ -59,6 +59,7 @@ app = FastAPI(
 
     ## Supported File Formats
     - JSON (.json)
+    - YAML (.yaml)
     - TOML (.toml)
     - XML (.xml)
 

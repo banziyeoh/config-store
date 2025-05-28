@@ -4,7 +4,7 @@ A FastAPI-based service that provides version-controlled configuration managemen
 
 ## Features
 
-- Store and manage configuration files in JSON, TOML, and XML formats
+- Store and manage configuration files in JSON, YAML, TOML, and XML formats
 - Version control with automatic versioning
 - Project-based organization
 - Full history tracking

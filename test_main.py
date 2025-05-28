@@ -253,7 +253,7 @@ def test_format_error():
     request = {"content": {"key": "value"}, "message": "Test unsupported format"}
     response = client.post(
         "/configs/test_project/test_config",
-        params={"file_format": "yaml"},  # Unsupported format
+        params={"file_format": "invalid"},  # Unsupported format
         json=request,
     )
     assert response.status_code == 400
@@ -262,7 +262,9 @@ def test_format_error():
 
 def test_invalid_jinja2_template(github_repo):
     """Test creating an invalid Jinja2 template."""
-    template_content = """Hello {{ name!"""  # Invalid syntax: unclosed variable
+    template_content = """Hello {{ name!
+Invalid template
+{% endif %}"""  # Invalid syntax: unclosed variable and unexpected endif
     request = {
         "content": {"template": template_content},
         "message": "Create invalid Jinja2 template",
@@ -274,7 +276,7 @@ def test_invalid_jinja2_template(github_repo):
     )
     assert response.status_code == 400
     error_detail = response.json()["detail"].lower()
-    assert "invalid jinja2 template" in error_detail
+    assert any(msg in error_detail for msg in ["invalid jinja2", "invalid template"])
 
 
 def test_create_jinja2_template(github_repo):
@@ -309,20 +311,42 @@ You have admin access.
     assert variables == {"name", "age", "is_admin"}
 
 
-def test_invalid_jinja2_template(github_repo):
-    """Test creating an invalid Jinja2 template."""
-    template_content = """Hello {{ name!
-Invalid template
-{% endif %}"""  # Invalid syntax: unclosed variable and unexpected endif
-    request = {
-        "content": {"template": template_content},
-        "message": "Create invalid Jinja2 template",
+def test_yaml_format(github_repo):
+    # Create a config with YAML format
+    test_data = {
+        "server": {"host": "localhost", "port": 8080},
+        "database": {"url": "postgresql://localhost/db", "timeout": 30},
     }
+    request = {"content": test_data, "message": "Test YAML format"}
     response = client.post(
-        "/configs/test_project/invalid_template",
-        params={"file_format": "jinja2"},
+        "/configs/test_project/test_config",
+        params={"file_format": "yaml"},
         json=request,
     )
-    assert response.status_code == 400
-    error_detail = response.json()["detail"].lower()
-    assert any(msg in error_detail for msg in ["invalid jinja2", "invalid template"])
+    assert response.status_code == 200
+    assert "created successfully" in response.json()["message"]
+
+    # Read and verify the content
+    response = client.get(
+        "/configs/test_project/test_config", params={"file_format": "yaml"}
+    )
+    assert response.status_code == 200
+    assert response.json() == test_data
+
+    # Update the config
+    test_data["server"]["port"] = 9000
+    update_request = {"content": test_data, "message": "Update YAML config"}
+    response = client.put(
+        "/configs/test_project/test_config",
+        params={"file_format": "yaml"},
+        json=update_request,
+    )
+    assert response.status_code == 200
+    assert "updated successfully" in response.json()["message"]
+
+    # Verify the update
+    response = client.get(
+        "/configs/test_project/test_config", params={"file_format": "yaml"}
+    )
+    assert response.status_code == 200
+    assert response.json() == test_data

@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 from typing import Any, Dict
 
 import toml
+import yaml
 from fastapi import HTTPException
 from jinja2 import Template
 
@@ -18,6 +19,8 @@ def parse_config_content(content: str, file_format: str) -> Dict[str, Any]:
             return json.loads(content)
         elif file_format == "toml":
             return toml.loads(content)
+        elif file_format == "yaml":
+            return yaml.safe_load(content)
         elif file_format == "xml":
             root = ET.fromstring(content)
             return {elem.tag: elem.text for elem in root}
@@ -54,6 +57,8 @@ def format_config_content(data: Dict[str, Any], file_format: str) -> str:
             return json.dumps(data, indent=2)
         elif file_format == "toml":
             return toml.dumps(data)
+        elif file_format == "yaml":
+            return yaml.safe_dump(data, default_flow_style=False)
         elif file_format == "xml":
             root = ET.Element("config")
             for key, value in data.items():
